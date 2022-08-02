@@ -1,5 +1,5 @@
 from collections.abc import Awaitable
-import streamlit
+import streamlit.scriptrunner.script_runner as script_runner
 import streamlit as st
 import asyncio
 import concurrent
@@ -7,21 +7,16 @@ import time
 
 
 def async_write(value):
-    loop: asyncio.AbstractEventLoop = asyncio.new_event_loop()
-    loop.set_debug(True)
-    print("creating empty dg")
     dg = st.empty()
-    print("created empty dg")
-    # task = loop.create_task(_async_write(dg, value))
-    pool = concurrent.futures.ThreadPoolExecutor()
 
-    ctx = streamlit.scriptrunner.script_runner.get_script_run_ctx()
+    pool = concurrent.futures.ThreadPoolExecutor()
+    ctx = script_runner.get_script_run_ctx()
 
     def r():
-        streamlit.scriptrunner.script_runner.add_script_run_ctx(None, ctx)
+        script_runner.add_script_run_ctx(None, ctx)
         return asyncio.run(_async_write(dg, value))
 
-    return loop.run_in_executor(pool, r)
+    return pool.submit(r)
 
 
 async def _async_write(dg, value: Awaitable):
@@ -37,7 +32,11 @@ async def test_fn():
     return "async write"
 
 
+start = time.time()
 st.write("sync write")
 async_write(test_fn())
-
+mid = time.time()
+st.write(mid - start)
 time.sleep(6)
+end = time.time()
+st.write(end - mid)
